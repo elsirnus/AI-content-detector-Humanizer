@@ -230,10 +230,89 @@ python -m pytest tests/ -v
 **Issue**: "Model loading timeout"
 **Solution**: Check internet connection and Hugging Face token
 
-## 📈 API Documentation
+## 📈 REST API Documentation
+
+This repository exposes a small HTTP API for the Humanizer so other services
+can transform AI-generated text programmatically. The API is implemented with
+FastAPI and provides interactive OpenAPI documentation at the following paths
+when the service is running:
+
+- Swagger UI: `http://127.0.0.1:8000/docs`
+- ReDoc: `http://127.0.0.1:8000/redoc`
+
+Base URL (development): `http://127.0.0.1:8000`
+
+Endpoints
+- `GET /health` — simple health check that returns `{ "status": "ok" }`.
+- `POST /humanize` — humanize text and return the rewritten text plus metrics.
+
+POST /humanize
+- Description: Protects citations, expands contractions, optionally replaces
+   synonyms, and can add academic transitional phrases. Returns the final
+   humanized text and word/sentence counts.
+- Request JSON body fields:
+   - `text` (string, required): Input text to humanize.
+   - `p_syn` (float, optional, 0.0–1.0): Synonym replacement intensity. Default 0.2.
+   - `p_trans` (float, optional, 0.0–1.0): Academic transition insertion probability. Default 0.2.
+   - `preserve_linebreaks` (bool, optional): Preserve original line breaks. Default true.
+
+Example request (curl):
+
+```bash
+curl -s -X POST "http://127.0.0.1:8000/humanize" \
+   -H "Content-Type: application/json" \
+   -d '{"text": "Recent studies (Smith et al., 2020) show promising results. It can't be ignored.", "p_syn": 0.3, "p_trans": 0.2, "preserve_linebreaks": true}'
+```
+
+Example response (truncated):
+
+```json
+{
+   "humanized_text": "Moreover, Recent studies (Smith et al., 2020) show promising results. It cannot be ignored.",
+   "orig_word_count": 11,
+   "orig_sentence_count": 2,
+   "new_word_count": 13,
+   "new_sentence_count": 3,
+   "words_added": 2,
+   "sentences_added": 1
+}
+```
+
+Running the API locally
+
+1. Install dependencies (ensure `fastapi` and `uvicorn` are present in `requirements.txt`):
+
+```powershell
+pip install -r requirements.txt
+```
+
+2. Start the API server (development):
+
+```powershell
+python -m uvicorn api.humanize_api:app --host 127.0.0.1 --port 8000 --reload
+```
+
+3. Open the interactive docs at `http://127.0.0.1:8000/docs` to try the endpoint
+    with built-in examples.
+
+Programmatic usage (Python example):
+
+```python
+import requests
+
+payload = {
+      "text": "Recent studies (Smith et al., 2020) show promising results. It can't be ignored.",
+      "p_syn": 0.3,
+      "p_trans": 0.2,
+      "preserve_linebreaks": True,
+}
+
+r = requests.post('http://127.0.0.1:8000/humanize', json=payload)
+print(r.json()['humanized_text'])
+```
 
 ### Custom Integration
-The utility modules can be imported for standalone use:
+The utility modules can still be imported for in-process usage (no HTTP):
 
 ```python
 from utils.ai_detection_utils import classify_text_hf
@@ -286,7 +365,7 @@ For support and questions:
 - [ ] Real-time collaboration features
 - [ ] Advanced AI model fine-tuning
 - [ ] Mobile application
-- [ ] API service deployment
+- [ ✅ ] API service deployment
 - [ ] Plugin system for extensibility
 
 ---
