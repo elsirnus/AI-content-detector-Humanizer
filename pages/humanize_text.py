@@ -84,9 +84,49 @@ def restore_citations(text, placeholder_map):
 ########################################
 # Step 2: Expansions, Synonyms, & Transitions
 ########################################
-contraction_map = {
-    "n't": " not", "'re": " are", "'s": " is", "'ll": " will",
-    "'ve": " have", "'d": " would", "'m": " am"
+# Map common full-token contractions to their expansions. Use exact-token
+# matching first to avoid splitting tokens like "can't" -> "ca not".
+# Whole-word contraction map (preferred replacements)
+WHOLE_CONTRACTIONS = {
+    "can't": "cannot",
+    "won't": "will not",
+    "shan't": "shall not",
+    "ain't": "is not",
+    "i'm": "i am",
+    "it's": "it is",
+    "we're": "we are",
+    "they're": "they are",
+    "you're": "you are",
+    "he's": "he is",
+    "she's": "she is",
+    "that's": "that is",
+    "there's": "there is",
+    "what's": "what is",
+    "who's": "who is",
+    "let's": "let us",
+    "didn't": "did not",
+    "doesn't": "does not",
+    "don't": "do not",
+    "couldn't": "could not",
+    "shouldn't": "should not",
+    "wouldn't": "would not",
+    "isn't": "is not",
+    "aren't": "are not",
+    "weren't": "were not",
+    "hasn't": "has not",
+    "haven't": "have not",
+    "hadn't": "had not",
+}
+
+# Suffix-based fallback contractions (used only if whole-word replacement didn't match)
+SUFFIX_CONTRACTIONS = {
+    "n't": " not",
+    "'re": " are",
+    "'s": " is",
+    "'ll": " will",
+    "'ve": " have",
+    "'d": " would",
+    "'m": " am"
 }
 
 ACADEMIC_TRANSITIONS = [
@@ -105,22 +145,54 @@ ACADEMIC_TRANSITIONS = [
 ]
 
 def expand_contractions(sentence):
+    # 1) Apply whole-word contractions using regex on the raw sentence to
+    #    avoid tokenizers splitting contractions (e.g., "can't" -> "ca n't").
+    def _replace_whole(match):
+        orig = match.group(0)
+        key = orig.lower()
+        repl = WHOLE_CONTRACTIONS.get(key, orig)
+        # preserve capitalization of the first character
+        if orig and orig[0].isupper():
+            repl = repl.capitalize()
+        return repl
+
+    # Build a regex alternation for whole contractions and allow optional
+    # tokenized opening/closing quotes (`` and ''). This ensures we match
+    # contractions even when they appear as `` can't '' after tokenization.
+    alt = "|".join(re.escape(k) for k in WHOLE_CONTRACTIONS.keys())
+    whole_pattern = rf"(?:(``)\s*)?(?P<word>(?:{alt}))(?:\s*(''))?"
+
+    def _replace_whole_with_quotes(match):
+        open_tok = match.group(1) or ""
+        word = match.group('word')
+        close_tok = match.group(3) or ""
+        key = word.lower()
+        repl = WHOLE_CONTRACTIONS.get(key, word)
+        if word and word[0].isupper():
+            repl = repl.capitalize()
+        return f"{open_tok}{repl}{close_tok}"
+
+    sentence = re.sub(whole_pattern, _replace_whole_with_quotes,
+                      sentence, flags=re.IGNORECASE)
+
+    # 2) Tokenize and handle suffix-based contractions as a fallback
     tokens = word_tokenize(sentence)
-    expanded = []
+    out_tokens = []
     for t in tokens:
-        replaced = False
         lower_t = t.lower()
-        for contr, expansion in contraction_map.items():
-            if contr in lower_t and lower_t.endswith(contr):
-                new_t = lower_t.replace(contr, expansion)
-                if t[0].isupper():
+        replaced = False
+        for contr, expansion in SUFFIX_CONTRACTIONS.items():
+            if lower_t.endswith(contr):
+                base = lower_t[: -len(contr)]
+                new_t = base + expansion
+                if t and t[0].isupper():
                     new_t = new_t.capitalize()
-                expanded.append(new_t)
+                out_tokens.append(new_t)
                 replaced = True
                 break
         if not replaced:
-            expanded.append(t)
-    return " ".join(expanded)
+            out_tokens.append(t)
+    return " ".join(out_tokens)
 
 def replace_synonyms(sentence, p_syn=0.2):
     if not nlp:
