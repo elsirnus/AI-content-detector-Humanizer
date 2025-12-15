@@ -150,6 +150,13 @@ The application will open in your default browser at `http://localhost:8501`
 5. View enhanced text with citation protection
 6. Download the humanized result
 
+### Local API Access
+For programmatic access, run the Streamlit app with background API:
+```bash
+streamlit run api/humanize_api.py
+```
+This starts the UI and a local Flask API at `http://127.0.0.1:8001`. Use tools like Postman or curl to call GET /health and POST /humanize endpoints.
+
 ## ⚙️ Configuration
 
 ### Environment Variables
@@ -230,70 +237,61 @@ python -m pytest tests/ -v
 **Issue**: "Model loading timeout"
 **Solution**: Check internet connection and Hugging Face token
 
-## 📈 REST API Documentation
+## 📈 Local API Documentation
 
-This repository exposes a small HTTP API for the Humanizer so other services
-can transform AI-generated text programmatically. The API is implemented with
-FastAPI and provides interactive OpenAPI documentation at the following paths
-when the service is running:
+This repository provides a Streamlit app that includes an interactive UI for text humanization and also starts a small local HTTP API (Flask) in the background for programmatic access. The API exposes endpoints for health checks and text humanization.
 
-- Swagger UI: `http://127.0.0.1:8000/docs`
-- ReDoc: `http://127.0.0.1:8000/redoc`
-
-Base URL (development): `http://127.0.0.1:8000`
+Base URL (local development): `http://127.0.0.1:8001`
 
 Endpoints
 - `GET /health` — simple health check that returns `{ "status": "ok" }`.
 - `POST /humanize` — humanize text and return the rewritten text plus metrics.
 
 POST /humanize
-- Description: Protects citations, expands contractions, optionally replaces
-   synonyms, and can add academic transitional phrases. Returns the final
-   humanized text and word/sentence counts.
+- Description: Protects citations, expands contractions, optionally replaces synonyms, and can add academic transitional phrases. Returns the final humanized text and word/sentence counts.
 - Request JSON body fields:
-   - `text` (string, required): Input text to humanize.
-   - `p_syn` (float, optional, 0.0–1.0): Synonym replacement intensity. Default 0.2.
-   - `p_trans` (float, optional, 0.0–1.0): Academic transition insertion probability. Default 0.2.
-   - `preserve_linebreaks` (bool, optional): Preserve original line breaks. Default true.
+  - `text` (string, required): Input text to humanize.
+  - `p_syn` (float, optional, 0.0–1.0): Synonym replacement intensity. Default 0.2.
+  - `p_trans` (float, optional, 0.0–1.0): Academic transition insertion probability. Default 0.2.
+  - `preserve_linebreaks` (bool, optional): Preserve original line breaks. Default true.
 
 Example request (curl):
 
 ```bash
-curl -s -X POST "http://127.0.0.1:8000/humanize" \
-   -H "Content-Type: application/json" \
-   -d '{"text": "Recent studies (Smith et al., 2020) show promising results. It can't be ignored.", "p_syn": 0.3, "p_trans": 0.2, "preserve_linebreaks": true}'
+curl -s -X POST "http://127.0.0.1:8001/humanize" \
+  -H "Content-Type: application/json" \
+  -d '{"text": "Recent studies (Smith et al., 2020) show promising results. It can't be ignored.", "p_syn": 0.3, "p_trans": 0.2, "preserve_linebreaks": true}'
 ```
 
 Example response (truncated):
 
 ```json
 {
-   "humanized_text": "Moreover, Recent studies (Smith et al., 2020) show promising results. It cannot be ignored.",
-   "orig_word_count": 11,
-   "orig_sentence_count": 2,
-   "new_word_count": 13,
-   "new_sentence_count": 3,
-   "words_added": 2,
-   "sentences_added": 1
+  "humanized_text": "Moreover, Recent studies (Smith et al., 2020) show promising results. It cannot be ignored.",
+  "orig_word_count": 11,
+  "orig_sentence_count": 2,
+  "new_word_count": 13,
+  "new_sentence_count": 3,
+  "words_added": 2,
+  "sentences_added": 1
 }
 ```
 
 Running the API locally
 
-1. Install dependencies (ensure `fastapi` and `uvicorn` are present in `requirements.txt`):
+1. Install dependencies (ensure `flask` is present in `requirements.txt`):
 
 ```powershell
 pip install -r requirements.txt
 ```
 
-2. Start the API server (development):
+2. Start the Streamlit app with background API:
 
 ```powershell
-python -m uvicorn api.humanize_api:app --host 127.0.0.1 --port 8000 --reload
+streamlit run api/humanize_api.py
 ```
 
-3. Open the interactive docs at `http://127.0.0.1:8000/docs` to try the endpoint
-    with built-in examples.
+The Streamlit UI will open, and the background Flask API will be available at `http://127.0.0.1:8001`.
 
 Programmatic usage (Python example):
 
@@ -301,17 +299,17 @@ Programmatic usage (Python example):
 import requests
 
 payload = {
-      "text": "Recent studies (Smith et al., 2020) show promising results. It can't be ignored.",
-      "p_syn": 0.3,
-      "p_trans": 0.2,
-      "preserve_linebreaks": True,
+    "text": "Recent studies (Smith et al., 2020) show promising results. It can't be ignored.",
+    "p_syn": 0.3,
+    "p_trans": 0.2,
+    "preserve_linebreaks": True,
 }
 
-r = requests.post('http://127.0.0.1:8000/humanize', json=payload)
+r = requests.post('http://127.0.0.1:8001/humanize', json=payload)
 print(r.json()['humanized_text'])
 ```
 
-### Custom Integration
+**Note**: The API is intended for local development and testing. For production use, consider deploying the Streamlit app or extracting the Flask API to a dedicated server.### Custom Integration
 The utility modules can still be imported for in-process usage (no HTTP):
 
 ```python
