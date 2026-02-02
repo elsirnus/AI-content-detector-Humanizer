@@ -22,6 +22,33 @@ A comprehensive web application that combines AI content detection with text hum
 - **Real-time Metrics**: Track word count and sentence count changes
 - **Academic Focus**: Maintain formal tone while enhancing readability
 
+### ✨ NEW Features (v2.0)
+
+#### 📝 Direct Text Analysis
+- Paste text directly without uploading files
+- Instant AI detection with sentence-level breakdown
+- Confidence threshold adjustment
+- CSV export of results
+
+#### ⚡ Batch Processing  
+- Process multiple PDF and TXT files simultaneously
+- Support for up to 10 files per batch
+- Export results as CSV, Excel, or JSON
+- Summary statistics and analytics
+
+#### 🔗 Document Comparison
+- Compare 2-3 documents side-by-side
+- Similarity matrix (0-100%)
+- AI content distribution analysis
+- Multiple view modes for detailed insights
+
+#### 📊 Statistics Dashboard
+- Real-time usage analytics
+- Performance metrics tracking
+- Content classification distribution
+- Activity timeline and trends
+- Exportable reports
+
 ## 🛠️ Technologies Used
 
 ### Core Framework
